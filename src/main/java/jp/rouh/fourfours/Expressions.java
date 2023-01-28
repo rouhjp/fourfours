@@ -12,6 +12,7 @@ public final class Expressions {
     }
     private static final Pattern PERFECT_PATTERN = Pattern.compile("[-+/*^SR4!()]+");
     private static final Pattern ACCEPTABLE_PATTERN = Pattern.compile("[\\d-+/*^SR4!()]*");
+    private static final Pattern ILLEGAL_NEGATE_PATTERN = Pattern.compile(".*[-+*/^]-.*");
 
     public static boolean isPerfect(String expression){
         return PERFECT_PATTERN.matcher(expression.toUpperCase().replaceAll("\\s", "")).matches()
@@ -31,16 +32,23 @@ public final class Expressions {
     }
 
     public static Evaluable parse(String expression){
-        var e = expression.toUpperCase().replaceAll("\\s", "");
-        if (e.isEmpty()){
-            throw new IllegalArgumentException("expression is empty");
-        }
-        if (!ACCEPTABLE_PATTERN.matcher(e).matches()){
+        var exp = expression.toUpperCase().replaceAll("\\s", "");
+        if (!ACCEPTABLE_PATTERN.matcher(exp).matches()){
             throw new IllegalArgumentException("expression contains invalid character");
         }
+        if (ILLEGAL_NEGATE_PATTERN.matcher(exp).matches()){
+            throw new IllegalArgumentException("negate operator without bracket found");
+        }
+        if (exp.isEmpty()){
+            throw new IllegalArgumentException("expression is empty");
+        }
+        return doParse(exp);
+    }
+
+    private static Evaluable doParse(String exp){
         int node = 0;
-        for (int nest = 0, i = 0; i<e.length(); i++){
-            char c = e.charAt(i);
+        for (int nest = 0, i = 0; i<exp.length(); i++){
+            char c = exp.charAt(i);
             if (c=='('){
                 nest++;
                 if (nest==0){
@@ -54,17 +62,20 @@ public final class Expressions {
                 }
             }
             if (nest>0) continue;
-            var left = e.substring(0, i);
-            var right = e.substring(i + 1);
+            var left = exp.substring(0, i);
+            var right = exp.substring(i + 1);
             if (c=='+'){
                 if (left.isEmpty() || right.isEmpty()){
-                    return parse(e.substring(1));
+                    throw new IllegalArgumentException("missing operand of add operator");
                 }
                 return new Add(parse(left), parse(right));
             }
             if (c=='-'){
-                if (left.isEmpty() || right.isEmpty()){
-                    return parse(e.substring(1));
+                if (right.isEmpty()){
+                    throw new IllegalArgumentException("missing operand of subtract operator");
+                }
+                if (left.isEmpty()){
+                    return new Negate(parse(exp.substring(1)));
                 }
                 return new Subtract(parse(left), parse(right));
             }
@@ -72,8 +83,8 @@ public final class Expressions {
         if (node>=2){
             throw new IllegalArgumentException("missing operator");
         }
-        for (int nest = 0, i = 0; i<e.length(); i++){
-            char c = e.charAt(i);
+        for (int nest = 0, i = 0; i<exp.length(); i++){
+            char c = exp.charAt(i);
             if (c=='('){
                 nest++;
             }
@@ -81,8 +92,8 @@ public final class Expressions {
                 nest--;
             }
             if (nest>0) continue;
-            var left = e.substring(0, i);
-            var right = e.substring(i + 1);
+            var left = exp.substring(0, i);
+            var right = exp.substring(i + 1);
             if (c=='*'){
                 if (left.isEmpty() || right.isEmpty()){
                     throw new IllegalArgumentException("missing operand of multiply operator");
@@ -102,8 +113,8 @@ public final class Expressions {
                 return new Power(parse(left), parse(right));
             }
         }
-        char first = e.charAt(0);
-        var after = e.substring(1);
+        char first = exp.charAt(0);
+        var after = exp.substring(1);
         if (first=='S'){
             if (after.isEmpty()){
                 throw new IllegalArgumentException("missing operand of sum operator");
@@ -116,8 +127,8 @@ public final class Expressions {
             }
             return new Root(parse(after));
         }
-        char last = e.charAt(e.length() - 1);
-        var before = e.substring(0, e.length() - 1);
+        char last = exp.charAt(exp.length() - 1);
+        var before = exp.substring(0, exp.length() - 1);
         if (last=='!'){
             if (before.isEmpty()){
                 throw new IllegalArgumentException("missing operand of factorial operator");
@@ -125,12 +136,16 @@ public final class Expressions {
             return new Factorial(parse(before));
         }
         if (first=='(' && last==')'){
-            return parse(e.substring(1, e.length() - 1));
+            var middle = exp.substring(1, exp.length() - 1);
+            if (middle.isEmpty()){
+                throw new IllegalArgumentException("empty bracket");
+            }
+            return parse(exp.substring(1, exp.length() - 1));
         }
         try{
-            return new Constant(new BigInteger(e));
-        }catch (NumberFormatException ex){
-            throw new IllegalArgumentException(ex);
+            return new Constant(new BigInteger(exp));
+        }catch (NumberFormatException e){
+            throw new IllegalArgumentException(e);
         }
     }
 }
