@@ -97,4 +97,10 @@ public class ExpressionsTest {
         Assertions.assertEquals(111, evaluate(expression).intValue());
     }
 
+    @Test
+    public void testMultipleSubtract(){
+        var expression = "44-4-4";
+        Assertions.assertEquals(36, evaluate(expression).intValue());
+    }
+
 }

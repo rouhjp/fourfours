@@ -47,18 +47,18 @@ public final class Expressions {
 
     private static Evaluable doParse(String exp){
         int node = 0;
-        for (int nest = 0, i = 0; i<exp.length(); i++){
+        for (int nest = 0, i = exp.length() - 1; i>=0; i--){
             char c = exp.charAt(i);
-            if (c=='('){
-                nest++;
-                if (nest==0){
-                    node++;
-                }
-            }
             if (c==')'){
+                nest++;
+            }
+            if (c=='('){
                 nest--;
                 if (nest<0){
                     throw new IllegalArgumentException("unexpected end of bracket");
+                }
+                if (nest==0){
+                    node++;
                 }
             }
             if (nest>0) continue;
@@ -79,6 +79,7 @@ public final class Expressions {
                 }
                 return new Subtract(parse(left), parse(right));
             }
+
         }
         if (node>=2){
             throw new IllegalArgumentException("missing operator");
