@@ -103,4 +103,10 @@ public class ExpressionsTest {
         Assertions.assertEquals(36, evaluate(expression).intValue());
     }
 
+    @Test
+    public void testMultiplyBracket(){
+        var expression = "(4/4)*(4/4)";
+        Assertions.assertEquals(1, evaluate(expression).intValue());
+    }
+
 }
